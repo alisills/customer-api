@@ -123,6 +123,42 @@ requiredFields filter ((field) -> isEmpty(payload[field]))]]></ee:set-variable>
 output application/json
 ---
 {
+	status: "ERROR",
+	errorCode: "CUSTOMER_NOT_FOUND",
+	message: error.description,
+	correlationId: correlationId
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="700a8e2b-63de-40e5-9cbf-c2d4a220a5d5" type="CUSTOMER:INVALID_REQUEST">
+			<set-variable value="#[400]" doc:name="Status 400" doc:id="f325d55a-b09e-47e7-9a38-fdad518ce7c7" variableName="httpStatus"/>
+			<ee:transform doc:name="Bad Request Response" doc:id="6acde41d-4571-4047-bdb0-8cbe1ad96d8d" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "ERROR",
+	errorCode: "INVALID_REQUEST",
+	message: error.description,
+	correlationId: correlationId
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4f2a467a-08c9-4ded-8f8f-d8e8336e4547" type="ANY">
+			<set-variable value="#[500]" doc:name="Status 500" doc:id="1d0ab934-8e08-44c6-a954-ff17d84ddfd8" variableName="httpStatus"/>
+			<ee:transform doc:name="Internal Error Response" doc:id="a7a183af-ed35-42e7-8952-1a05b1a29702" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "ERROR",
+	errorCode: "INTERNAL_ERROR",
+	message: "An unexpected error occurred. Please contact support with the correlationId.",
+	correlationId: correlationId
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
