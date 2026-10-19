@@ -1,0 +1,26 @@
+[
+	{
+		"id": "C1001",
+		"firstName": "Asha",
+		"lastName": "Rao",
+		"email": "asha.rao@example.com",
+		"phone": "+91-98450-11111",
+		"city": "Pune"
+	},
+	{
+		"id": "C1002",
+		"firstName": "Daniel",
+		"lastName": "Okafor",
+		"email": "daniel.okafor@example.com",
+		"phone": "+44-7700-900123",
+		"city": "London"
+	},
+	{
+		"id": "C1003",
+		"firstName": "Meera",
+		"lastName": "Iyer",
+		"email": "meera.iyer@example.com",
+		"phone": "+91-98450-33333",
+		"city": "Pune"
+	}
+]
