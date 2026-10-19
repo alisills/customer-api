@@ -23,6 +23,7 @@ if (isEmpty(city)) customers
 else customers filter ((customer) -> lower(customer.city) == lower(city))]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<error-handler ref="api-error-handler" />
 	</flow>
 	<flow name="get-customer-by-id-flow" doc:id="6abf0e62-8dde-42c1-8629-5d7d350be98f" >
 		<http:listener doc:name="Listener" doc:id="1be16e0e-9d55-4b4e-9d8b-72b6dad07a33" config-ref="HTTP_Listener_config" path="/api/customers/{id}" allowedMethods="GET">
@@ -56,26 +57,16 @@ payload]]></ee:set-payload>
 		</ee:transform>
 			</otherwise>
 		</choice>
+		<error-handler ref="api-error-handler" />
 	</flow>
-	<flow name="customer-apiFlow2" doc:id="abce9423-4240-42d6-a7ee-64362ffe6245" >
-		<http:listener doc:name="Listener" doc:id="e8a96230-a523-4f07-93d5-a62daf41a0aa" config-ref="HTTP_Listener_config" path="/api/customers" allowedMethods="POST"/>
-		<ee:transform doc:name="Transform Message" doc:id="ed2d98bf-20b2-49d1-ad2a-6f2ad225a92c" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-{
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<choice doc:name="Choice" doc:id="9685ea26-8491-4d3d-93e3-7b884618d5b1" >
-			<when />
-			<otherwise >
-				<raise-error doc:name="Raise error" doc:id="38713f77-2a08-4216-939a-604f6aa505e1" type="CUSTOMER:INVALID_REQUEST"/>
-			</otherwise>
-		</choice>
-		<set-variable value="" doc:name="Set Variable" doc:id="6f3d9c60-96bb-4bfa-ba76-3dd6cee67d2b" />
-		<ee:transform doc:name="Transform Message" doc:id="99095439-a73d-4a5c-8c9c-915cbfd9b2b6" >
+	<flow name="create-customer-flow" doc:id="abce9423-4240-42d6-a7ee-64362ffe6245" >
+		<http:listener doc:name="Listener" doc:id="e8a96230-a523-4f07-93d5-a62daf41a0aa" config-ref="HTTP_Listener_config" path="/api/customers" allowedMethods="POST">
+			<http:response statusCode="#[vars.httpStatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStatus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<ee:transform doc:name="Check required fields" doc:id="ed2d98bf-20b2-49d1-ad2a-6f2ad225a92c" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/java
@@ -86,10 +77,55 @@ output application/java
 			<ee:variables >
 				<ee:set-variable variableName="missingFields" ><![CDATA[%dw 2.0
 output application/java
+var requiredFields = ["firstName", "lastName", "email"]
+---
+requiredFields filter ((field) -> isEmpty(payload[field]))]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Valid Request?" doc:id="9685ea26-8491-4d3d-93e3-7b884618d5b1" >
+			<when expression="#[not isEmpty(vars.missingFields)]">
+				<raise-error doc:name="Invalid Request" doc:id="38713f77-2a08-4216-939a-604f6aa505e1" type="CUSTOMER:INVALID_REQUEST" description="#['Missing required fields: ' ++ (vars.missingFields joinBy ', ')]"/>
+			</when>
+			<otherwise>
+				<set-variable value="#[201]" doc:name="Status 201" doc:id="6f3d9c60-96bb-4bfa-ba76-3dd6cee67d2b" variableName="httpStatus"/>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Build New Customer" doc:id="99095439-a73d-4a5c-8c9c-915cbfd9b2b6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: "C" ++ (uuid()[0 to 7]),
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	email: lower(payload.email),
+	phone: payload.phone default "",
+	city: payload.city default ""
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="missingFields" ><![CDATA[%dw 2.0
+output application/java
 var requriedFields = ["firstName", "lastName", "email"]
 ---
 requiredFields filter ((field) -> isEmpty(payload[field]))]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<error-handler ref="api-error-handler" />
 	</flow>
+	<error-handler name="api-error-handler" doc:id="155de82f-18f4-433e-b465-242a1d3539ad" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="433de76f-85b5-4617-9a1b-91599e94f874" type="CUSTOMER:NOT_FOUND">
+			<set-variable value="#[404]" doc:name="Status 404" doc:id="0aee7875-5e85-4336-990a-81e65d84d9f8" variableName="httpStatus"/>
+			<ee:transform doc:name="Not Found Response" doc:id="fbf46425-88bc-47fb-841a-3ea587674949" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
 </mule>
