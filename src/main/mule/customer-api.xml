@@ -6,7 +6,7 @@
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<flow name="get-customers-flow" doc:id="e1522d22-7c27-430a-9f1f-63979cf520eb" >
-		<http:listener doc:name="Listener" doc:id="d6aa0beb-b5f8-4c6e-a795-97250b492b3d" allowedMethods="POST" config-ref="HTTP_Listener_config" path="/api/customers">
+		<http:listener doc:name="Listener" doc:id="d6aa0beb-b5f8-4c6e-a795-97250b492b3d" allowedMethods="GET" config-ref="HTTP_Listener_config" path="/api/customers">
 			<http:response statusCode="#[vars.httpstatus default 200]" />
 			<http:error-response statusCode="#[vars.httpStatus default 500]" >
 				<http:body ><![CDATA[#[payload]]]></http:body>
@@ -16,7 +16,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
-var customers = readUrl("classpath://data/customers.json", "application/json")
+var customers = readUrl("classpath://data/customer.json", "application/json")
 var city = attributes.queryParams.city
 ---
 if (isEmpty(city)) customers
@@ -32,12 +32,12 @@ else customers filter ((customer) -> lower(customer.city) == lower(city))]]></ee
 				<http:body ><![CDATA[#[payload]]]></http:body>
 			</http:error-response>
 		</http:listener>
-		<set-variable value="#[attributes.uriParams.id]" doc:name="customerId" doc:id="99d09590-d24a-4f90-a589-b47dd176f775" variableName="Save customer ID"/>
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Save customer ID" doc:id="99d09590-d24a-4f90-a589-b47dd176f775" variableName="customerId"/>
 		<ee:transform doc:name="Find Customer" doc:id="7e846c68-654e-4255-a4f2-134a1ce08195" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/java
-var customers = readUrl("classpath://data/customers.json", "application/json")
+var customers = readUrl("classpath://data/customer.json", "application/json")
 ---
 (customers filter ((customer) -> customer.id == vars.customerId))[0]]]></ee:set-payload>
 			</ee:message>
@@ -68,11 +68,6 @@ payload]]></ee:set-payload>
 		</http:listener>
 		<ee:transform doc:name="Check required fields" doc:id="ed2d98bf-20b2-49d1-ad2a-6f2ad225a92c" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-{
-}]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="missingFields" ><![CDATA[%dw 2.0
@@ -105,11 +100,6 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
-				<ee:set-variable variableName="missingFields" ><![CDATA[%dw 2.0
-output application/java
-var requriedFields = ["firstName", "lastName", "email"]
----
-requiredFields filter ((field) -> isEmpty(payload[field]))]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<error-handler ref="api-error-handler" />
